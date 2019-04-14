@@ -81,7 +81,9 @@ class Voila(Application):
         'static': 'Voila.static_root',
         'strip_sources': 'Voila.strip_sources',
         'autoreload': 'Voila.autoreload',
-        'template': 'Voila.template'
+        'template': 'Voila.template',
+        'base_url': 'Voila.base_url',
+        'server_url': 'Voila.server_url',
     }
     connection_dir_root = Unicode(
         config=True,
@@ -91,6 +93,25 @@ class Voila(Application):
         )
     )
     connection_dir = Unicode()
+
+    base_url = Unicode(
+        '/',
+        config=True,
+        help=(
+            'Path for voila API calls. If server_url is unset, this will be \
+            used for both the base route of the server and the client. \
+            If server_url is set, the server will server the routes prefixed \
+            by server_url, while the client will prefix by base_url (this is \
+            useful in reverse proxies).')
+    )
+
+    server_url = Unicode(
+        None,
+        config=True,
+        allow_none=True,
+        help=(
+            'Path to prefix to voila API handlers. Leave unset to default to base_url')
+    )
 
     template = Unicode(
         'default',
@@ -251,16 +272,20 @@ class Voila(Application):
             config_manager=self.config_manager
         )
 
-        base_url = self.app.settings.get('base_url', '/')
+        # setup base_url and server_url in tornado settings
+        if 'base_url' not in self.tornado_settings:
+            self.tornado_settings['base_url'] = self.base_url
+        server_url = self.server_url or self.base_url
+        self.tornado_settings['server_url'] = server_url
         self.app.settings.update(self.tornado_settings)
 
         handlers = []
 
         handlers.extend([
-            (url_path_join(base_url, r'/api/kernels/%s' % _kernel_id_regex), KernelHandler),
-            (url_path_join(base_url, r'/api/kernels/%s/channels' % _kernel_id_regex), ZMQChannelsHandler),
+            (url_path_join(server_url, r'/api/kernels/%s' % _kernel_id_regex), KernelHandler),
+            (url_path_join(server_url, r'/api/kernels/%s/channels' % _kernel_id_regex), ZMQChannelsHandler),
             (
-                url_path_join(base_url, r'/voila/static/(.*)'),
+                url_path_join(server_url, r'/voila/static/(.*)'),
                 MultiStaticFileHandler,
                 {
                     'paths': self.static_paths,
@@ -272,7 +297,7 @@ class Voila(Application):
         # this handler serves the nbextensions similar to the classical notebook
         handlers.append(
             (
-                url_path_join(base_url, r'/voila/nbextensions/(.*)'),
+                url_path_join(server_url, r'/voila/nbextensions/(.*)'),
                 FileFindHandler,
                 {
                     'path': self.nbextensions_path,
@@ -283,7 +308,7 @@ class Voila(Application):
 
         if self.notebook_path:
             handlers.append((
-                url_path_join(base_url, r'/'),
+                url_path_join(server_url, r'/'),
                 VoilaHandler,
                 {
                     'notebook_path': os.path.relpath(self.notebook_path, self.root_dir),
@@ -296,9 +321,9 @@ class Voila(Application):
         else:
             self.log.debug('serving directory: %r', self.root_dir)
             handlers.extend([
-                (base_url, VoilaTreeHandler),
-                (url_path_join(base_url, r'/voila/tree' + path_regex), VoilaTreeHandler),
-                (url_path_join(base_url, r'/voila/render' + path_regex), VoilaHandler,
+                (server_url, VoilaTreeHandler),
+                (url_path_join(server_url, r'/voila/tree' + path_regex), VoilaTreeHandler),
+                (url_path_join(server_url, r'/voila/render' + path_regex), VoilaHandler,
                     {
                         'strip_sources': self.strip_sources,
                         'nbconvert_template_paths': self.nbconvert_template_paths,
