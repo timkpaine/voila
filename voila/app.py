@@ -260,8 +260,12 @@ class Voila(Application):
         read_config_path += [os.path.join(p, 'nbconfig') for p in jupyter_config_path()]
         self.config_manager = ConfigManager(parent=self, read_config_path=read_config_path)
 
+        # default server_url to base_url
+        self.server_url = self.server_url or self.base_url
+
         self.app = tornado.web.Application(
             base_url=self.base_url,
+            server_url=self.server_url or self.base_url,
             kernel_manager=self.kernel_manager,
             allow_remote_access=True,
             autoreload=self.autoreload,
@@ -273,20 +277,15 @@ class Voila(Application):
             config_manager=self.config_manager
         )
 
-        # setup base_url and server_url in tornado settings
-        if 'base_url' not in self.tornado_settings:
-            self.tornado_settings['base_url'] = self.base_url
-        server_url = self.server_url or self.base_url
-        self.tornado_settings['server_url'] = server_url
         self.app.settings.update(self.tornado_settings)
 
         handlers = []
 
         handlers.extend([
-            (url_path_join(server_url, r'/api/kernels/%s' % _kernel_id_regex), KernelHandler),
-            (url_path_join(server_url, r'/api/kernels/%s/channels' % _kernel_id_regex), ZMQChannelsHandler),
+            (url_path_join(self.server_url, r'/api/kernels/%s' % _kernel_id_regex), KernelHandler),
+            (url_path_join(self.server_url, r'/api/kernels/%s/channels' % _kernel_id_regex), ZMQChannelsHandler),
             (
-                url_path_join(server_url, r'/voila/static/(.*)'),
+                url_path_join(self.server_url, r'/voila/static/(.*)'),
                 MultiStaticFileHandler,
                 {
                     'paths': self.static_paths,
@@ -298,7 +297,7 @@ class Voila(Application):
         # this handler serves the nbextensions similar to the classical notebook
         handlers.append(
             (
-                url_path_join(server_url, r'/voila/nbextensions/(.*)'),
+                url_path_join(self.server_url, r'/voila/nbextensions/(.*)'),
                 FileFindHandler,
                 {
                     'path': self.nbextensions_path,
@@ -309,7 +308,7 @@ class Voila(Application):
 
         if self.notebook_path:
             handlers.append((
-                url_path_join(server_url, r'/'),
+                url_path_join(self.server_url, r'/'),
                 VoilaHandler,
                 {
                     'notebook_path': os.path.relpath(self.notebook_path, self.root_dir),
@@ -322,9 +321,9 @@ class Voila(Application):
         else:
             self.log.debug('serving directory: %r', self.root_dir)
             handlers.extend([
-                (server_url, VoilaTreeHandler),
-                (url_path_join(server_url, r'/voila/tree' + path_regex), VoilaTreeHandler),
-                (url_path_join(server_url, r'/voila/render' + path_regex), VoilaHandler,
+                (self.server_url, VoilaTreeHandler),
+                (url_path_join(self.server_url, r'/voila/tree' + path_regex), VoilaTreeHandler),
+                (url_path_join(self.server_url, r'/voila/render' + path_regex), VoilaHandler,
                     {
                         'strip_sources': self.strip_sources,
                         'nbconvert_template_paths': self.nbconvert_template_paths,
