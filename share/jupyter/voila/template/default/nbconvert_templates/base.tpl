@@ -41,6 +41,10 @@
 </script>
 <script>
 requirejs.config({ baseUrl: '{{resources.base_url}}voila/', waitSeconds: 30})
+// TODO: This will make qgrid work and possibly other widget nbextensions
+// until we set up proper packaging, or fix qgrid
+//   see https://github.com/QuantStack/voila/issues/72
+define("base/js/dialog", [], () => {})
 requirejs(
     [
         "static/main",
