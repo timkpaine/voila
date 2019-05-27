@@ -5,24 +5,26 @@
 #                                                                           #
 # The full license is in the file LICENSE, distributed with this software.  #
 #############################################################################
+
+import os
 import tornado.web
 
 from jupyter_server.base.handlers import JupyterHandler
 
 import nbformat  # noqa: F401
+
 from .execute import executenb
-from .html import HTMLExporter
+from .exporter import VoilaExporter
 
 
 class VoilaHandler(JupyterHandler):
 
     def initialize(self, **kwargs):
         self.notebook_path = kwargs.pop('notebook_path', [])    # should it be []
-        self.strip_sources = kwargs.pop('strip_sources', True)
         self.nbconvert_template_paths = kwargs.pop('nbconvert_template_paths', [])
-        self.template_name = kwargs.pop('template_name', 'default')
         self.exporter_config = kwargs.pop('config', None)
         self.extra_extensions = kwargs.pop('extra_extensions', [])
+        self.voila_configuration = kwargs['voila_configuration']
 
     @tornado.web.authenticated
     @tornado.gen.coroutine
@@ -51,9 +53,10 @@ class VoilaHandler(JupyterHandler):
         kernel_name = notebook.metadata.get('kernelspec', {}).get('name', self.kernel_manager.default_kernel_name)
 
         # Launch kernel and execute notebook
-        kernel_id = yield tornado.gen.maybe_future(self.kernel_manager.start_kernel(kernel_name=kernel_name))
+        cwd = os.path.dirname(notebook_path)
+        kernel_id = yield tornado.gen.maybe_future(self.kernel_manager.start_kernel(kernel_name=kernel_name, path=cwd))
         km = self.kernel_manager.get_kernel(kernel_id)
-        result = executenb(notebook, km=km)
+        result = executenb(notebook, km=km, cwd=cwd)
 
         # render notebook to html
         resources = {
@@ -61,16 +64,16 @@ class VoilaHandler(JupyterHandler):
             'base_url': self.base_url,
             'nbextensions': nbextensions,
             'extra_extensions': self.extra_extensions,
+            'theme': self.voila_configuration.theme
         }
 
-        exporter = HTMLExporter(
-            template_file='voila.tpl',
+        exporter = VoilaExporter(
             template_path=self.nbconvert_template_paths,
             config=self.exporter_config,
             contents_manager=self.contents_manager  # for the image inlining
         )
 
-        if self.strip_sources:
+        if self.voila_configuration.strip_sources:
             exporter.exclude_input = True
             exporter.exclude_output_prompt = True
             exporter.exclude_input_prompt = True

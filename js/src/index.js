@@ -6,4 +6,5 @@
 * The full license is in the file LICENSE, distributed with this software. *
 ****************************************************************************/
 
-export { WidgetApplication } from './WidgetApplication';
+export { WidgetManager } from './manager';
+export { connectKernel } from './kernel'

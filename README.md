@@ -1,7 +1,7 @@
 # Voila
 
 [![Documentation](http://readthedocs.org/projects/voila/badge/?version=latest)](https://voila.readthedocs.io/en/latest/?badge=latest)
-[![Binder](https://img.shields.io/badge/launch-binder-brightgreen.svg)](https://mybinder.org/v2/gh/QuantStack/voila/stable?urlpath=voila/tree/notebooks)
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/QuantStack/voila/stable?urlpath=voila%2Ftree%2Fnotebooks)
 [![Join the Gitter Chat](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/QuantStack/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 Rendering of live Jupyter notebooks with interactive widgets.
@@ -46,7 +46,10 @@ To render the `bqplot` example notebook as a standalone app, run
 voila bqplot.ipynb
 ```
 
-To server a directory of jupyter notebooks, just run `voila` with no argument.
+To serve a directory of jupyter notebooks, just run `voila` with no argument.
+
+For more command line options (e.g., to specify an alternate port number),
+run `voila --help`.
 
 ### As a server extension to `notebook` or `jupyter_server`
 
@@ -76,4 +79,3 @@ copyright on their contributions.
 
 This software is licensed under the BSD-3-Clause license. See the
 [LICENSE](LICENSE) file for details.
-
