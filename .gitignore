@@ -28,9 +28,6 @@ config.rst
 
 package-lock.json
 
-<<<<<<< HEAD
-.autoversion
-=======
 share/jupyter/voila/templates/nbconvert/static/index.css
 share/jupyter/voila/templates/nbconvert/static/theme-light.css
 share/jupyter/voila/templates/nbconvert/static/theme-dark.css
@@ -38,4 +35,3 @@ share/jupyter/voila/templates/default/static/*voila.js
 share/jupyter/voila/templates/default/static/*[woff|woff2|eot|svg]
 
 js/lib/
->>>>>>> master
