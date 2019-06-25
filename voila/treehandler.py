@@ -8,11 +8,12 @@
 
 from tornado import web
 
-from jupyter_server.base.handlers import JupyterHandler
+from jupyter_server.extension.handler import ExtensionHandler
 from jupyter_server.utils import url_path_join, url_escape
 
 
-class VoilaTreeHandler(JupyterHandler):
+class VoilaTreeHandler(ExtensionHandler):
+
     def get_template(self, name):
         """Return the jinja template object for a given name"""
         return self.settings['voila_jinja2_env'].get_template(name)

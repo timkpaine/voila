@@ -10,19 +10,30 @@ import os
 
 import tornado.web
 
-from jupyter_server.base.handlers import JupyterHandler
+from jupyter_server.extension.handler import ExtensionHandler
 
 from .execute import executenb
 from .exporter import VoilaExporter
 
 
-class VoilaHandler(JupyterHandler):
+class VoilaHandler(ExtensionHandler):
+    
+    @property
+    def notebook_path(self):
+        return self.settings.get('notebook_path', [])
 
-    def initialize(self, **kwargs):
-        self.notebook_path = kwargs.pop('notebook_path', [])    # should it be []
-        self.nbconvert_template_paths = kwargs.pop('nbconvert_template_paths', [])
-        self.exporter_config = kwargs.pop('config', None)
-        self.voila_configuration = kwargs['voila_configuration']
+    @property
+    def nbconvert_template_paths(self):
+        return self.settings.get('nbconvert_template_paths', [])
+
+    @property
+    def exporter_config(self):
+        return self.settings.get('config', None)
+
+    @property
+    def voila_configuration(self):
+        return self.settings['voila_configuration']
+
 
     @tornado.web.authenticated
     @tornado.gen.coroutine
@@ -30,7 +41,7 @@ class VoilaHandler(JupyterHandler):
         # if the handler got a notebook_path argument, always serve that
         notebook_path = self.notebook_path or path
 
-        if self.voila_configuration.enable_nbextensions:
+        if self.voila_configuration['enable_nbextensions']:
             # generate a list of nbextensions that are enabled for the classical notebook
             # a template can use that to load classical notebook extensions, but does not have to
             notebook_config = self.config_manager.get('notebook')
@@ -62,7 +73,7 @@ class VoilaHandler(JupyterHandler):
             'kernel_id': kernel_id,
             'base_url': self.base_url,
             'nbextensions': nbextensions,
-            'theme': self.voila_configuration.theme
+            'theme': self.voila_configuration['theme']
         }
 
         exporter = VoilaExporter(
@@ -71,7 +82,7 @@ class VoilaHandler(JupyterHandler):
             contents_manager=self.contents_manager  # for the image inlining
         )
 
-        if self.voila_configuration.strip_sources:
+        if self.voila_configuration['strip_sources']:
             exporter.exclude_input = True
             exporter.exclude_output_prompt = True
             exporter.exclude_input_prompt = True

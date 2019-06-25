@@ -14,7 +14,7 @@
 
 {%- block html_head_js -%}
 
-<script src="{{resources.base_url}}voila/static/jquery.min.js"></script>
+<script src="{{resources.base_url}}static/voila/jquery.min.js"></script>
 
 <script
     src="{{resources.base_url}}voila/static/require.min.js"
@@ -39,11 +39,19 @@
 
 {% block footer %}
 {% block footer_js %}
+<script
+    src="{{resources.base_url}}static/voila/require.min.js"
+    integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA="
+    crossorigin="anonymous">
+</script>
 <script>
-requirejs.config({ baseUrl: '{{resources.base_url}}voila/', waitSeconds: 30})
+requirejs.config({ 
+    baseUrl: '{{resources.base_url}}static/voila/', 
+    waitSeconds: 30
+})
 requirejs(
     [
-        "static/main",
+        "main",
     {% for ext in resources.nbextensions -%}
         "{{resources.base_url}}voila/nbextensions/{{ ext }}.js",
     {% endfor %}
