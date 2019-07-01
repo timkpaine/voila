@@ -17,31 +17,14 @@ from .exporter import VoilaExporter
 
 
 class VoilaHandler(ExtensionHandler):
-    
-    @property
-    def notebook_path(self):
-        return self.settings.get('notebook_path', [])
-
-    @property
-    def nbconvert_template_paths(self):
-        return self.settings.get('nbconvert_template_paths', [])
-
-    @property
-    def exporter_config(self):
-        return self.settings.get('config', None)
-
-    @property
-    def voila_configuration(self):
-        return self.settings['voila_configuration']
-
 
     @tornado.web.authenticated
     @tornado.gen.coroutine
     def get(self, path=None):
         # if the handler got a notebook_path argument, always serve that
-        notebook_path = self.notebook_path or path
+        notebook_path = self.config.notebook_path or path
 
-        if self.voila_configuration['enable_nbextensions']:
+        if self.config.enable_nbextensions:
             # generate a list of nbextensions that are enabled for the classical notebook
             # a template can use that to load classical notebook extensions, but does not have to
             notebook_config = self.config_manager.get('notebook')
@@ -73,16 +56,16 @@ class VoilaHandler(ExtensionHandler):
             'kernel_id': kernel_id,
             'base_url': self.base_url,
             'nbextensions': nbextensions,
-            'theme': self.voila_configuration['theme']
+            'theme': self.config.theme
         }
 
         exporter = VoilaExporter(
-            template_path=self.nbconvert_template_paths,
+            template_path=self.config.nbconvert_template_paths,
             config=self.exporter_config,
             contents_manager=self.contents_manager  # for the image inlining
         )
 
-        if self.voila_configuration['strip_sources']:
+        if self.config.strip_sources:
             exporter.exclude_input = True
             exporter.exclude_output_prompt = True
             exporter.exclude_input_prompt = True

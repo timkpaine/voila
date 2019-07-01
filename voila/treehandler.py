@@ -56,7 +56,7 @@ class VoilaTreeHandler(ExtensionHandler):
                        breadcrumbs=breadcrumbs,
                        contents=contents,
                        terminals_available=False,
-                       server_root=self.settings['server_root_dir']))
+                       server_root=self.settings['root_dir']))
         elif cm.file_exists(path):
             # it's not a directory, we have redirecting to do
             model = cm.get(path, content=False)

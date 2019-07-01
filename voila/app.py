@@ -62,8 +62,7 @@ def _(x):
 class Voila(ExtensionApp):
     name = 'voila'
     version = __version__
-    examples = 'voila example.ipynb --port 8888'
-    
+    examples = 'jupyter voila example.ipynb'
     extension_name = 'voila'
 
     flags = {
@@ -102,13 +101,11 @@ class Voila(ExtensionApp):
     aliases = {
         'port': 'Voila.port',
         'static': 'Voila.static_root',
-        'strip_sources': 'VoilaConfiguration.strip_sources',
+        'strip_sources': 'Voila.strip_sources',
         'autoreload': 'Voila.autoreload',
-        'template': 'VoilaConfiguration.template',
-        'theme': 'VoilaConfiguration.theme',
-        'base_url': 'Voila.base_url',
-        'server_url': 'Voila.server_url',
-        'enable_nbextensions': 'VoilaConfiguration.enable_nbextensions'
+        'template': 'Voila.template',
+        'theme': 'Voila.theme',
+        'enable_nbextensions': 'Voila.enable_nbextensions'
     }
 
     template = Unicode(
@@ -131,27 +128,6 @@ class Voila(ExtensionApp):
         )
     )
     connection_dir = Unicode()
-
-    base_url = Unicode(
-        '/',
-        config=True,
-        help=_(
-            'Path for voila API calls. If server_url is unset, this will be \
-            used for both the base route of the server and the client. \
-            If server_url is set, the server will server the routes prefixed \
-            by server_url, while the client will prefix by base_url (this is \
-            useful in reverse proxies).'
-        )
-    )
-
-    server_url = Unicode(
-        None,
-        config=True,
-        allow_none=True,
-        help=_(
-            'Path to prefix to voila API handlers. Leave unset to default to base_url'
-        )
-    )
 
     notebook_path = Unicode(
         None,
@@ -258,22 +234,8 @@ class Voila(ExtensionApp):
         nbui = gettext.translation('nbui', localedir=os.path.join(ROOT, 'i18n'), fallback=True)
         env.install_gettext_translations(nbui, newstyle=False)
 
-        template_settings = dict(
-            voila_template_paths=self.template_paths,
-            voila_jinja2_env=env,
-            nbconvert_template_paths=self.nbconvert_template_paths
-        )
+        template_settings = {'voila_jinja2_env': env}
         self.settings.update(**template_settings)
-
-    def initialize_settings(self):
-        voila_configuration = dict(
-            template=self.template,
-            theme=self.theme,
-            strip_sources=self.strip_sources,
-            enable_nbextensions=self.enable_nbextensions,
-            notebook_path=self.notebook_path,
-        )
-        self.settings['voila_configuration'] = voila_configuration
 
     def initialize_handlers(self):
         handlers = [
