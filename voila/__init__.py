@@ -7,6 +7,7 @@
 #############################################################################
 
 from ._version import __version__  # noqa
+from .server_extension import load_jupyter_server_extension  # noqa
 
 
 def _jupyter_nbextension_paths():
@@ -14,4 +15,4 @@ def _jupyter_nbextension_paths():
         section="notebook",
         src="static",
         dest="voila",
-        require="voila/nbextension")]
+        require="voila/extension")]

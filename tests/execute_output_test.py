@@ -1,7 +1,9 @@
 import os
 
 from voila.execute import executenb
+
 from nbformat import read, NO_CONVERT
+
 from copy import deepcopy
 
 
@@ -26,7 +28,6 @@ def normalize_output(output):
 def normalize_outputs(outputs):
     for output in outputs:
         normalize_output(output)
-
 
 
 def test_execute_output():

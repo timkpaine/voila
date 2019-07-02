@@ -28,8 +28,15 @@ export class WidgetManager extends JupyterLabManager {
 
     constructor(kernel) {
         const context = createContext(kernel);
-        const rendermime = createRenderMimeRegistry();
+        const rendermime = new RenderMimeRegistry({
+            initialFactories: standardRendererFactories
+        });
         super(context, rendermime);
+        rendermime.addFactory({
+            safe: false,
+            mimeTypes: [WIDGET_MIMETYPE],
+            createRenderer: options => new WidgetRenderer(options, this)
+        }, 1);
         this._registerWidgets();
         this.loader = requireLoader;
     }
@@ -38,19 +45,33 @@ export class WidgetManager extends JupyterLabManager {
         const models = await this._build_models();
         const tags = document.body.querySelectorAll('script[type="application/vnd.jupyter.widget-view+json"]');
         for (let i=0; i!=tags.length; ++i) {
-            const viewtag = tags[i];
-            const widgetViewObject = JSON.parse(viewtag.innerHTML);
-            const { model_id } = widgetViewObject;
-            const model = models[model_id];
-            const widgetTag = document.createElement('div');
-            widgetTag.className = 'widget-subarea';
-            viewtag.parentElement.insertBefore(widgetTag, viewtag);
-            const view = await this.display_model(undefined, model, { el : widgetTag });
+            try {
+                const viewtag = tags[i];
+                const widgetViewObject = JSON.parse(viewtag.innerHTML);
+                const { model_id } = widgetViewObject;
+                const model = models[model_id];
+                const widgetel = document.createElement('div');
+                viewtag.parentElement.insertBefore(widgetel, viewtag);
+                const view = await this.display_model(undefined, model, { el : widgetel });
+            } catch (error) {
+               // Each widget view tag rendering is wrapped with a try-catch statement.
+               //
+               // This fixes issues with widget models that are explicitely "closed"
+               // but are still referred to in a previous cell output.
+               // Without the try-catch statement, this error interupts the loop and
+               // prevents the rendering of further cells.
+               //
+               // This workaround may not be necessary anymore with templates that make use
+               // of progressive rendering.
+            }
         }
     }
 
     display_view(msg, view, options) {
-        PhosphorWidget.Widget.attach(view.pWidget, options.el);
+        if (options.el) {
+            PhosphorWidget.Widget.attach(view.pWidget, options.el);
+        }
+        return view.pWidget;
     }
 
     async loadClass(className, moduleName, moduleVersion) {
@@ -102,8 +123,7 @@ export class WidgetManager extends JupyterLabManager {
 
         await Promise.all(widgets_info.map(async (widget_info) => {
             const state = widget_info.msg.content.data.state;
-            const modelPromise = this.new_model(
-                {
+            const modelPromise = this.new_model({
                     model_name: state._model_name,
                     model_module: state._model_module,
                     model_module_version: state._model_module_version,
@@ -143,14 +163,3 @@ function createContext(kernel) {
     };
 }
 
-function createRenderMimeRegistry() {
-    const rendermime = new RenderMimeRegistry({
-        initialFactories: standardRendererFactories
-    });
-    rendermime.addFactory({
-        safe: false,
-        mimeTypes: [WIDGET_MIMETYPE],
-        createRenderer: options => new WidgetRenderer(options, manager)
-    }, 1);
-    return rendermime;
-}

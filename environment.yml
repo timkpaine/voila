@@ -5,4 +5,8 @@ dependencies:
   - ipyvolume
   - bqplot
   - scipy
-  - voila=0.0.11
+  - ipympl
+  - voila=0.1.3
+  - ipympl
+  - xleaflet=0.7.0
+  - xeus-cling=0.5.1

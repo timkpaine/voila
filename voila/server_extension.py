@@ -15,7 +15,7 @@ from jupyter_server.utils import url_path_join
 from jupyter_server.base.handlers import path_regex
 from jupyter_server.base.handlers import FileFindHandler
 
-from .paths import ROOT, STATIC_ROOT, collect_template_paths, jupyter_path
+from .paths import ROOT, STATIC_ROOT, collect_template_paths, jupyter_path, notebook_path_regex
 from .handler import VoilaHandler
 from .treehandler import VoilaTreeHandler
 from .static_file_handler import MultiStaticFileHandler
@@ -47,28 +47,35 @@ def load_jupyter_server_extension(server_app):
 
     host_pattern = '.*$'
     base_url = url_path_join(web_app.settings['base_url'])
-    # First look into 'nbextensions_path' configuration key (classic notebook)
-    # and fall back to default path for nbextensions (jupyter server).
-    if 'nbextensions_path' in web_app.settings:
-        nbextensions_path = web_app.settings['nbextensions_path']
-    else:
-        nbextensions_path = jupyter_path('nbextensions')
+
     web_app.add_handlers(host_pattern, [
-        (url_path_join(base_url, '/voila/render' + path_regex), VoilaHandler, {
+        (url_path_join(base_url, '/voila/render' + notebook_path_regex), VoilaHandler, {
             'config': server_app.config,
             'nbconvert_template_paths': nbconvert_template_paths,
             'voila_configuration': voila_configuration
         }),
         (url_path_join(base_url, '/voila'), VoilaTreeHandler),
         (url_path_join(base_url, '/voila/tree' + path_regex), VoilaTreeHandler),
-        (url_path_join(base_url, '/voila/static/(.*)'),  MultiStaticFileHandler, {'paths': static_paths}),
-        # this handler serves the nbextensions similar to the classical notebook
-        (
-            url_path_join(base_url, r'/voila/nbextensions/(.*)'),
-            FileFindHandler,
-            {
-                'path': nbextensions_path,
-                'no_cache_paths': ['/'],  # don't cache anything in nbextensions
-            },
-        )
+        (url_path_join(base_url, '/voila/static/(.*)'), MultiStaticFileHandler, {'paths': static_paths}),
     ])
+
+    # Serving notebook extensions
+    if voila_configuration.enable_nbextensions:
+        # First look into 'nbextensions_path' configuration key (classic notebook)
+        # and fall back to default path for nbextensions (jupyter server).
+        if 'nbextensions_path' in web_app.settings:
+            nbextensions_path = web_app.settings['nbextensions_path']
+        else:
+            nbextensions_path = jupyter_path('nbextensions')
+
+        web_app.add_handlers(host_pattern, [
+            # this handler serves the nbextensions similar to the classical notebook
+            (
+                url_path_join(base_url, r'/voila/nbextensions/(.*)'),
+                FileFindHandler,
+                {
+                    'path': nbextensions_path,
+                    'no_cache_paths': ['/'],  # don't cache anything in nbextensions
+                },
+            )
+        ])

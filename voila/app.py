@@ -7,7 +7,9 @@
 #############################################################################
 
 from zmq.eventloop import ioloop
+
 import gettext
+import io
 import logging
 import threading
 import tempfile
@@ -34,15 +36,17 @@ from traitlets import Unicode, Integer, Bool, Dict, List, default
 
 from jupyter_server.services.kernels.kernelmanager import MappingKernelManager
 from jupyter_server.services.kernels.handlers import KernelHandler, ZMQChannelsHandler
-from jupyter_server.base.handlers import path_regex
 from jupyter_server.services.contents.largefilemanager import LargeFileManager
+from jupyter_server.base.handlers import path_regex
 from jupyter_server.utils import url_path_join
 from jupyter_server.services.config import ConfigManager
 from jupyter_server.base.handlers import FileFindHandler
+
 from jupyter_core.paths import jupyter_config_path, jupyter_path
+
 from ipython_genutils.py3compat import getcwd
 
-from .paths import ROOT, STATIC_ROOT, collect_template_paths
+from .paths import ROOT, STATIC_ROOT, collect_template_paths, notebook_path_regex
 from .handler import VoilaHandler
 from .treehandler import VoilaTreeHandler
 from ._version import __version__
@@ -53,8 +57,8 @@ ioloop.install()
 _kernel_id_regex = r"(?P<kernel_id>\w+-\w+-\w+-\w+-\w+)"
 
 
-# placeholder for i18
-def _(x): return x
+def _(x):
+    return x
 
 
 class Voila(Application):
@@ -82,18 +86,24 @@ class Voila(Application):
     port = Integer(
         8866,
         config=True,
-        help='Port of the voila server. Default 8866.'
+        help=_(
+            'Port of the voila server. Default 8866.'
+        )
     )
     autoreload = Bool(
         False,
         config=True,
-        help='Will autoreload to server and the page when a template, js file or Python code changes'
+        help=_(
+            'Will autoreload to server and the page when a template, js file or Python code changes'
+        )
     )
-    root_dir = Unicode(config=True, help="The directory to use for notebooks.")
+    root_dir = Unicode(config=True, help=_('The directory to use for notebooks.'))
     static_root = Unicode(
         STATIC_ROOT,
         config=True,
-        help='Directory holding static assets (HTML, JS and CSS files).'
+        help=_(
+            'Directory holding static assets (HTML, JS and CSS files).'
+        )
     )
     aliases = {
         'port': 'Voila.port',
@@ -104,10 +114,14 @@ class Voila(Application):
         'theme': 'VoilaConfiguration.theme',
         'base_url': 'Voila.base_url',
         'server_url': 'Voila.server_url',
+        'enable_nbextensions': 'VoilaConfiguration.enable_nbextensions'
     }
+    classes = [
+        VoilaConfiguration
+    ]
     connection_dir_root = Unicode(
         config=True,
-        help=(
+        help=_(
             'Location of temporry connection files. Defaults '
             'to system `tempfile.gettempdir()` value.'
         )
@@ -117,20 +131,22 @@ class Voila(Application):
     base_url = Unicode(
         '/',
         config=True,
-        help=(
+        help=_(
             'Path for voila API calls. If server_url is unset, this will be \
             used for both the base route of the server and the client. \
             If server_url is set, the server will server the routes prefixed \
             by server_url, while the client will prefix by base_url (this is \
-            useful in reverse proxies).')
+            useful in reverse proxies).'
+        )
     )
 
     server_url = Unicode(
         None,
         config=True,
         allow_none=True,
-        help=(
-            'Path to prefix to voila API handlers. Leave unset to default to base_url')
+        help=_(
+            'Path to prefix to voila API handlers. Leave unset to default to base_url'
+        )
     )
 
     template = Unicode(
@@ -145,14 +161,15 @@ class Voila(Application):
         None,
         config=True,
         allow_none=True,
-        help=(
-            'path to notebook to serve with voila')
+        help=_(
+            'path to notebook to serve with voila'
+        )
     )
 
     nbconvert_template_paths = List(
         [],
         config=True,
-        help=(
+        help=_(
             'path to nbconvert templates'
         )
     )
@@ -161,7 +178,7 @@ class Voila(Application):
         [],
         allow_none=True,
         config=True,
-        help=(
+        help=_(
             'path to nbconvert templates'
         )
     )
@@ -169,7 +186,7 @@ class Voila(Application):
     static_paths = List(
         [STATIC_ROOT],
         config=True,
-        help=(
+        help=_(
             'paths to static assets'
         )
     )
@@ -178,12 +195,12 @@ class Voila(Application):
                  help=_("The IP address the notebook server will listen on."))
 
     open_browser = Bool(True, config=True,
-                        help="""Whether to open in a browser after starting.
+                        help=_("""Whether to open in a browser after starting.
                         The specific browser used is platform dependent and
                         determined by the python standard library `webbrowser`
                         module, unless it is overridden using the --browser
                         (NotebookApp.browser) configuration option.
-                        """)
+                        """))
 
     browser = Unicode(u'', config=True,
                       help="""Specify what command to use to invoke a web
@@ -246,12 +263,18 @@ class Voila(Application):
         proto = 'http'
         return "%s://%s:%i%s" % (proto, ip, self.port, self.base_url)
 
-    config_file_paths = List(Unicode(), config=True, help='Paths to search for voila.(py|json)')
+    config_file_paths = List(
+        Unicode(),
+        config=True,
+        help=_(
+            'Paths to search for voila.(py|json)'
+        )
+    )
 
     tornado_settings = Dict(
         {},
         config=True,
-        help=(
+        help=_(
             'Extra settings to apply to tornado application, e.g. headers, ssl, etc'
         )
     )
@@ -408,17 +431,18 @@ class Voila(Application):
             )
         ])
 
-        # this handler serves the nbextensions similar to the classical notebook
-        handlers.append(
-            (
-                url_path_join(self.server_url, r'/voila/nbextensions/(.*)'),
-                FileFindHandler,
-                {
-                    'path': self.nbextensions_path,
-                    'no_cache_paths': ['/'],  # don't cache anything in nbextensions
-                },
+        # Serving notebook extensions
+        if self.voila_configuration.enable_nbextensions:
+            handlers.append(
+                (
+                    url_path_join(self.server_url, r'/voila/nbextensions/(.*)'),
+                    FileFindHandler,
+                    {
+                        'path': self.nbextensions_path,
+                        'no_cache_paths': ['/'],  # don't cache anything in nbextensions
+                    },
+                )
             )
-        )
 
         if self.notebook_path:
             handlers.append((
@@ -436,7 +460,7 @@ class Voila(Application):
             handlers.extend([
                 (self.server_url, VoilaTreeHandler),
                 (url_path_join(self.server_url, r'/voila/tree' + path_regex), VoilaTreeHandler),
-                (url_path_join(self.server_url, r'/voila/render' + path_regex), VoilaHandler,
+                (url_path_join(self.server_url, r'/voila/render' + notebook_path_regex), VoilaHandler,
                     {
                         'nbconvert_template_paths': self.nbconvert_template_paths,
                         'config': self.config,
@@ -446,13 +470,18 @@ class Voila(Application):
             ])
 
         self.app.add_handlers('.*$', handlers)
-        if self.open_browser:
-            self.launch_browser()
         self.listen()
+
+    def stop(self):
+        shutil.rmtree(self.connection_dir)
+        self.kernel_manager.shutdown_all()
 
     def listen(self):
         self.app.listen(self.port)
         self.log.info('Voila is running at:\n%s' % self.display_url)
+
+        if self.open_browser:
+            self.launch_browser()
 
         self.ioloop = tornado.ioloop.IOLoop.current()
         try:
@@ -460,8 +489,7 @@ class Voila(Application):
         except KeyboardInterrupt:
             self.log.info('Stopping...')
         finally:
-            shutil.rmtree(self.connection_dir)
-            self.kernel_manager.shutdown_all()
+            self.stop()
 
     def launch_browser(self):
         try:
@@ -476,7 +504,7 @@ class Voila(Application):
         uri = self.base_url
         fd, open_file = tempfile.mkstemp(suffix='.html')
         # Write a temporary file to open in the browser
-        with open(fd, 'w', encoding='utf-8') as fh:
+        with io.open(fd, 'w', encoding='utf-8') as fh:
             # TODO: do we want to have the token?
             # if self.token:
             #     url = url_concat(url, {'token': self.token})

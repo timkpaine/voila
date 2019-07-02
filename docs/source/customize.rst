@@ -26,7 +26,7 @@ and calling it from the command-line like so:
 For example, Voila includes one other template that uses a Javascript library and
 an alternate ``<div>`` layout in order to let the user drag and drop cells.
 
-For example, to use the [gridstack](https://github.com/QuantStack/voila-gridstack/) template, use the command:
+For example, to use the `gridstack <https://github.com/QuantStack/voila-gridstack/>`_ template, use the command:
 
 .. code-block:: bash
 
@@ -84,7 +84,7 @@ the folder structure of the base Voila template (called "default"):
 In the case of the default template, we also provide a ``base.tpl`` that our custom template uses as a base.
 The name ``voila.tpl`` is special - you cannot name your custom nbconvert something else.
 
-**To customize the HTML page templates**, store them i na folder called ``templatename/templates/<name>.html``.
+**To customize the HTML page templates**, store them in a folder called ``templatename/templates/<name>.html``.
 These are files that Voila can serve as standalone HTML (for example, the ``tree.html`` template defines how
 folders/files are displayed in ``localhost:8866/voila/tree``). You can override the defaults by providing your
 own HTML files of the same name.
@@ -133,6 +133,53 @@ As well as ``templates/tree.html`` to include an image.
 Finally, we can tell ``Voila`` to use this custom template the next time we use it on
 a Jupyter notebook by using the name of the folder in the ``--template`` parameter::
 
-voila mynotebook.ipynb --template=mytemplate
+    voila mynotebook.ipynb --template=mytemplate
+
 
 The result should be a Voila dashboard with your custom modifications made!
+
+
+Adding your own static files
+============================
+
+If you create your own theme, you may also want to define and use your
+own static files, such as CSS and Javascript. To use your own static files,
+follow these steps:
+
+1. Create a folder along with your template (e.g., ``mytemplate/static/``).
+2. Put your static files in this template.
+3. In your template file (e.g. ``voila.tpl``), link these static files with
+   the following path::
+
+      {{resources.base_url}}voila/static/<path-to-static-files>
+
+4. When you call ``voila``, configure the static folder by using the
+   ``--static`` kwarg, or by configuring ``--VoilaConfiguration.static_root``.
+
+Any folders / files that are inside the folder given with this configuration
+will be copied to ``{{resources.base_url}}voila/static/``.
+
+For example, if you had a CSS file called ``custom.css`` in ``static/css``,
+you would link it in your template like so::
+
+   <link rel="stylesheet" type="text/css" href="{{resources.base_url}}voila/static/css/custom.css"></link>
+
+
+Configure voila for the Jupyter Server
+======================================
+
+Several pieces of ``voila``'s functionality can be controlled when it is
+run. This can be done either as a part of the standalone CLI, or with the
+Jupyter Server. To configure ``voila`` when run by the Jupyter Server,
+use the following pattern when invoking the command that runs Jupyter (e.g.,
+Jupyter Lab or Jupyter Notebook)::
+
+   <jupyter-command> --VoilaConfiguration.<config-key>=<config-value>
+
+For example, to control the template used by ``voila`` from within a Jupyter
+Lab session, use the following command when starting the server::
+
+   jupyter lab --VoilaConfiguration.template=distill
+
+When users run ``voila`` by hitting the ``voila/`` endpoint, this configuration
+will be used.

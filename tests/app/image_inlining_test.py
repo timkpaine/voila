@@ -1,7 +1,10 @@
 # tests the --template argument of voila
 import pytest
+
 import base64
+
 import os
+
 
 @pytest.fixture
 def voila_notebook(notebook_directory):
@@ -21,4 +24,3 @@ def test_image_inlining(http_client, base_url, notebook_directory):
         svg_data = f.read()
     svg_data_base64 = base64.b64encode(svg_data).decode('ascii')
     assert svg_data_base64 in html_text
-

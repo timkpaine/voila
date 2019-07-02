@@ -8,6 +8,7 @@
 
 import os
 import json
+
 from jupyter_core.paths import jupyter_path
 
 ROOT = os.path.dirname(__file__)
@@ -15,12 +16,14 @@ STATIC_ROOT = os.path.join(ROOT, 'static')
 # if the directory above us contains the following paths, it means we are installed in dev mode (pip install -e .)
 DEV_MODE = os.path.exists(os.path.join(ROOT, '../setup.py')) and os.path.exists(os.path.join(ROOT, '../share'))
 
+notebook_path_regex = r'(.*\.ipynb)'
+
 
 def collect_template_paths(
-       nbconvert_template_paths,
-       static_paths,
-       tornado_template_paths,
-       template_name='default'):
+        nbconvert_template_paths,
+        static_paths,
+        tornado_template_paths,
+        template_name='default'):
     """
     Voila supports custom templates for rendering notebooks.
 
