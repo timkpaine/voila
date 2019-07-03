@@ -7,13 +7,14 @@
 ****************************************************************************/
 
 import { RenderMimeRegistry, standardRendererFactories } from '@jupyterlab/rendermime';
-import { requireLoader } from '@jupyter-widgets/html-manager';
 import { WidgetManager as JupyterLabManager } from '@jupyter-widgets/jupyterlab-manager';
 import { WidgetRenderer } from '@jupyter-widgets/jupyterlab-manager';
 import { output } from '@jupyter-widgets/jupyterlab-manager';
 import * as base from '@jupyter-widgets/base';
 import * as controls from '@jupyter-widgets/controls';
 import * as PhosphorWidget from '@phosphor/widgets';
+
+import { requireLoader } from './loader';
 
 if (typeof window !== "undefined" && typeof window.define !== "undefined") {
     window.define("@jupyter-widgets/base", base);
@@ -28,10 +29,11 @@ export class WidgetManager extends JupyterLabManager {
 
     constructor(kernel) {
         const context = createContext(kernel);
+        const settings = createSettings();
         const rendermime = new RenderMimeRegistry({
             initialFactories: standardRendererFactories
         });
-        super(context, rendermime);
+        super(context, rendermime, settings);
         rendermime.addFactory({
             safe: false,
             mimeTypes: [WIDGET_MIMETYPE],
@@ -93,6 +95,9 @@ export class WidgetManager extends JupyterLabManager {
                 }
             })
         }
+    }
+
+    restoreWidgets(notebook) {
     }
 
     _registerWidgets() {
@@ -158,8 +163,19 @@ function createContext(kernel) {
             kernel,
             kernelChanged: {
                 connect: () => {}
-            }
-        }
+            },
+            statusChanged: {
+                connect: () => {}
+            },
+        },
+        saveState: {
+            connect: () => {}
+        },
     };
 }
 
+function createSettings() {
+    return {
+        saveState: false
+    };
+}
